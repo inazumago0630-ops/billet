@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ビレット長さ管理</title>
+
+<style>
+body{
+    font-family:sans-serif;
+    margin:10px;
+}
+h2{
+    text-align:center;
+}
+table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:12px;
+}
+th,td{
+    border:1px solid #ccc;
+    padding:4px;
+}
+input{
+    width:100%;
+    box-sizing:border-box;
+}
+.good{
+    background:#c8f7c5;
+}
+.bad{
+    background:#ffcfcf;
+}
+button{
+    padding:10px;
+    margin:5px;
+}
+.summary{
+    margin-top:20px;
+    font-size:16px;
+    font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+
+<h2>金属ビレット全長管理表</h2>
+
+<button onclick="addRow()">行追加</button>
+<button onclick="saveData()">保存</button>
+
+<table>
+<thead>
+<tr>
+<th>ピットNo</th>
+<th>チャージNo</th>
+<th>刻印</th>
+<th>付加余長</th>
+<th>予定寸法</th>
+<th>実寸法</th>
+<th>差</th>
+<th>判定</th>
+<th>圧延日</th>
+<th>測定日</th>
+<th>材質</th>
+<th>補正</th>
+<th>作業者名</th>
+</tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
+
+<div class="summary">
+平均差：<span id="avg">0</span> mm<br>
+σ（標準偏差）：<span id="sigma">0</span> mm
+</div>
+
+<script>
+
+function addRow(){
+
+let tr=document.createElement("tr");
+
+for(let i=0;i<13;i++){
+
+let td=document.createElement("td");
+let input=document.createElement("input");
+
+if(i===4 || i===5){
+input.type="number";
+input.oninput=calc;
+}
+
+if(i===8 || i===9){
+input.type="date";
+}
+
+td.appendChild(input);
+tr.appendChild(td);
+}
+
+document.getElementById("tbody").appendChild(tr);
+
+}
+
+function calc(){
+
+let rows=document.querySelectorAll("#tbody tr");
+let diffs=[];
+
+rows.forEach(row=>{
+
+let planned=parseFloat(row.cells[4].children[0].value)||0;
+let actual=parseFloat(row.cells[5].children[0].value)||0;
+
+let diff=actual-planned;
+
+row.cells[6].innerHTML=diff;
+
+let judge=Math.abs(diff)<=5 ? "○" : "×";
+
+row.cells[7].innerHTML=judge;
+
+row.cells[7].className=
+judge==="○" ? "good" : "bad";
+
+if(planned!==0 || actual!==0){
+diffs.push(diff);
+}
+
+});
+
+if(diffs.length===0) return;
+
+let avg=
+diffs.reduce((a,b)=>a+b,0)/
+diffs.length;
+
+let variance=
+diffs.reduce(
+(a,b)=>a+Math.pow(b-avg,2),0
+)/diffs.length;
+
+let sigma=Math.sqrt(variance);
+
+document.getElementById("avg").innerHTML=
+avg.toFixed(2);
+
+document.getElementById("sigma").innerHTML=
+sigma.toFixed(2);
+
+}
+
+function saveData(){
+
+let data=[];
+
+document.querySelectorAll("#tbody tr")
+.forEach(row=>{
+
+let rowData=[];
+
+for(let i=0;i<13;i++){
+
+if(i===6 || i===7){
+rowData.push(row.cells[i].innerText);
+}else{
+rowData.push(
+row.cells[i].children[0].value
+);
+}
+
+}
+
+data.push(rowData);
+
+});
+
+localStorage.setItem(
+"billetData",
+JSON.stringify(data)
+);
+
+alert("保存しました");
+
+}
+
+function loadData(){
+
+let data=JSON.parse(
+localStorage.getItem("billetData")
+);
+
+if(!data) return;
+
+data.forEach(r=>{
+
+addRow();
+
+let rows=
+document.querySelectorAll("#tbody tr");
+
+let row=
+rows[rows.length-1];
+
+for(let i=0;i<13;i++){
+
+if(i!==6 && i!==7){
+
+row.cells[i]
+.children[0].value=r[i];
+
+}
+
+}
+
+});
+
+calc();
+
+}
+
+for(let i=0;i<5;i++){
+addRow();
+}
+
+loadData();
+
+</script>
+
+</body>
+</html>
